@@ -1,20 +1,31 @@
 # huffman-compressor-cpp
 
-Hackathon: Zero Dependency Hackathon (Aug 28–31, 2026) Author: Amit Sharma Track: F — Open / Wildcard
+**Hackathon:** Zero Dependency Hackathon (Aug 28–31, 2026)
+**Author:** Amit Sharma
+**Track:** F — Open / Wildcard
 
-A C++23 command-line compressor/decompressor built entirely from scratch in **one implementation file**: `huffman.cpp`.
+A C++23 file compressor/decompressor, built from scratch in one file (`huffman.cpp`), using Huffman coding. Zero third-party dependencies.
 
-> A reasonable engineer assumes compression needs zlib. This is built purely on libc/STL: `priority_queue`, `fstream`, manual bitpacking — and ships as one file, with a byte-identical reproducible build.
+> A reasonable engineer assumes compression needs zlib. This is built purely on libc/STL — `priority_queue`, `fstream`, manual bitpacking.
 
-This is a Track F (Open/Wildcard) hackathon entry targeting Single File, Reproducible Build, Package Killer, and STDLIB Log bonuses.
+---
+
+## Problem it solves
+
+Every language reaches for a package (`zlib`, `libzip`) to shrink files. This tool proves the same result — smaller files, correctly restored — is achievable with nothing but the standard library, giving a fully portable, dependency-free compressor.
+
+## Tech stack
+
+- **Language:** C++23
+- **Libraries:** none — only `<fstream>`, `<queue>`, `<filesystem>`, `<chrono>`, `<memory>`
+- **Build:** GNU Make + g++/clang++
+- **Dependencies:** none (see `deps-proof.txt`)
 
 ## Package killed: zlib
 
-The package killed is **zlib**, a library with millions of installations and a common default dependency for compression. This project is not a drop-in replacement for zlib's DEFLATE format or performance envelope; it is a useful, transparent file compressor when portability, inspectability, and zero third-party dependencies matter. It uses only the C++ standard library plus normal OS/runtime facilities.
+zlib has millions of installs and is the default compression dependency almost everywhere. This isn't a DEFLATE-speed replacement — it's an honest, transparent compressor for when zero dependencies matter more than raw ratio.
 
 ## Build and run
-
-Requires a C++23 compiler and `make`.
 
 ```sh
 make build
@@ -22,56 +33,62 @@ make build
 ./huffman decompress input.hfm restored.txt
 cmp input.txt restored.txt
 make test
-make deps-proof
 ```
 
-The tool prints byte counts, compression ratio, and elapsed time. Exit status is `0` on success, `1` for operational/data errors, and `2` for invalid CLI syntax.
+Exit codes: `0` success, `1` data/operational error, `2` bad CLI usage.
 
-## Format and algorithm
+## How it works
 
-Compression scans byte frequencies, constructs a deterministic Huffman tree with `std::priority_queue`, derives prefix codes, and packs bits manually. An HFM1 file contains magic, a mode byte, original size, then either raw bytes or a 256-entry little-endian frequency table followed by Huffman bits. The embedded table means decompression needs only the `.hfm` file.
+1. Scan byte frequencies in the input
+2. Build a Huffman tree with `std::priority_queue`
+3. Pack bits manually into an `HFM1` file (magic + mode + size + frequency table + bitstream)
 
-The compressor chooses raw mode whenever the Huffman header/payload would be larger. Empty files, a file containing one distinct byte, binary data, and incompressible data are all supported. Decoder validation rejects bad magic, unsupported modes, truncated headers/bitstreams, and inconsistent frequency totals.
+The frequency table is embedded, so decompression needs only the `.hfm` file. If Huffman encoding would make the file bigger, it falls back to raw storage automatically.
 
-Honest limits: this is byte-oriented static Huffman coding, not DEFLATE. It has a 2,061-byte Huffman header and therefore intentionally stores small or random files raw. It has no streaming mode, checksums, archive support, encryption, or compatibility with `.gz` files.
+**Honest limits:** static byte-level Huffman only, no LZ77 — so it won't beat `gzip` on repetitive text. 2,061-byte header means tiny files are stored raw. No streaming, checksums, or encryption.
 
-## Honest gzip/zlib comparison
-
-`gzip` is a development-only benchmark comparison, never a runtime or build dependency. On a representative text-heavy file, run:
+## gzip comparison (dev-only, not a dependency)
 
 ```sh
-./huffman compress sample.txt sample.hfm
 gzip -9 -c sample.txt > sample.txt.gz
 wc -c sample.txt sample.hfm sample.txt.gz
 ```
 
-Expect gzip/zlib (DEFLATE: LZ77 + Huffman) to usually win on repetitive text because this project deliberately implements only Huffman coding. The comparison is included to make that tradeoff explicit, not to claim an unfair win.
-
 ## Reproducible build
 
-The Makefile uses a fixed `-frandom-seed`, strips debug info, uses `-ffile-prefix-map` for build paths, and does not use date/time macros. `make verify-repro` performs two clean builds and compares their SHA-256 output.
+Fixed `-frandom-seed`, stripped debug info, `-ffile-prefix-map` for paths — no timestamps baked in.
 
 ```sh
 make verify-repro
-sha256sum huffman
 ```
 
-Hashes are platform/compiler-specific. Publish the two matching values produced on the judging machine here as proof:
+Runs two clean builds and diffs their SHA-256 hashes.
 
 ```text
-Build 1 SHA-256: generated by `make verify-repro` (must equal Build 2)
-Build 2 SHA-256: generated by `make verify-repro` (must equal Build 1)
+Build 1 SHA-256: <fill in on judging machine>
+Build 2 SHA-256: <must match>
 ```
 
-The repository avoids claiming a fabricated hash: an executable hash necessarily changes with compiler, linker, and operating system. The target verifies the required equality mechanically.
+## Bonus challenges claimed
+
+| Bonus | Pts | Where |
+|-------|-----|-------|
+| Single File | +5 | Whole implementation in `huffman.cpp` |
+| Reproducible Build | +5 | `make verify-repro` |
+| Package Killer | +3 | Replaces zlib, see `STDLIB.md` |
+| STDLIB Log | +3 | 10+ substitutions in `STDLIB.md` |
 
 ## Layout
 
 ```text
-huffman.cpp              complete implementation (single file)
-tests/test_huffman.cpp   assert-based round-trip test harness
-Makefile                 build/test/reproducibility commands
+huffman.cpp              implementation (single file)
+tests/test_huffman.cpp   round-trip tests
+Makefile                 build / test / repro
 STDLIB.md                dependency substitutions
-deps-proof.txt           generated `ldd huffman` evidence
+deps-proof.txt           ldd output
 .zero-dep.toml           track metadata
 ```
+
+## License
+
+MIT
