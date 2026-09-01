@@ -1,5 +1,7 @@
 # huffman-compressor-cpp
 
+Hackathon: Zero Dependency Hackathon (Aug 28–31, 2026) Author: Amit Sharma Track: F — Open / Wildcard
+
 A C++23 command-line compressor/decompressor built entirely from scratch in **one implementation file**: `huffman.cpp`.
 
 > A reasonable engineer assumes compression needs zlib. This is built purely on libc/STL: `priority_queue`, `fstream`, manual bitpacking — and ships as one file, with a byte-identical reproducible build.
